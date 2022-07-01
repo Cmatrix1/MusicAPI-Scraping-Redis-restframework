@@ -1,37 +1,46 @@
 from requests import get
 from bs4 import BeautifulSoup
-
+from .redis import cache_checker, cache_add
 
 class MusicScraper():
 
     def __extract_source(self, url):
+        print("request Sended", url)
         request = get(url).content
         return BeautifulSoup(request, "html.parser")
 
-    def __base_search_fa(self, url, leter):
-        soup = self.__extract_source(url + leter)
-        musics = soup.find_all(class_="more")
-        return set(map(lambda x: x["href"], musics))
-
-    def __base_search_en(self, url, leter):
-        soup = self.__extract_source(url + leter)
-        musics = soup.find_all(class_="more")
-        return set(map(lambda x: x.a["href"], musics))
-
-    def __base_extract(self, url, clsname):
+    def base_extract(self, url):
         soup = self.__extract_source(url)
-        urlbox = soup.find(class_=clsname).find_all("a")
-        print(url)
-        return set(map(lambda x : x["href"], urlbox))
+        urlbox = soup.find(class_="lnkdl animate").find_all("a")[:2]
+        name = soup.find(class_="center").h2.text
+        image = soup.find(class_="center").img["src"]
+        dlurl = list(map(lambda x : x["href"], urlbox))
+        music_id = soup.find("textarea", {"class":"ltr"}).text.split("/")[-2]
+        return {"name":name, "id":music_id, "urls":dlurl, "image":image}
 
     def fa_search(self, leter):
-        return self.__base_search("https://nex1music.ir/?s=", leter)
+        soup = self.__extract_source("https://nex1music.ir/?s=" + leter)
+        finds = soup.find_all(class_="more")
+        return list(map(lambda x:x["href"], finds))
 
-    def en_search(self, leter):
-        return self.__base_search_en("https://musicdel.ir/?s=", leter)
+    def searcher(self, leter):
+        is_leter = cache_checker(leter)
+        if is_leter:
+            return is_leter
+    
+        urls = self.fa_search(leter)
+        results = []
+        for i in urls:
+            data = cache_checker(i)
+            if data:
+                results.append(data)
+            else:
+                try:
+                    info = self.base_extract(i)
+                    results.append(info)
+                    cache_add(i, info)
+                except:
+                    break
+        cache_add(leter, results)
+        return results
 
-    def fa_extract(self, url):
-        return self.__base_extract(url, "lnkdl animate")
-
-    def en_extract(self, url):
-        return self.__base_extract(url, "downloads")
