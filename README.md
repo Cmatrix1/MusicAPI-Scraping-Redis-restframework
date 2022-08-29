@@ -21,11 +21,16 @@ pip install -r requirement.txt
 # Usage
 - For use this API you should Run redis on port 6379
 - Run Server
-
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 python manage.py runserver
+```
+
+# Use API
+You can test the APIs with this command
+```
+python manage.py test
 ```
 
 # Technologies used
@@ -33,8 +38,4 @@ python manage.py runserver
 - Redis
 - Web Scraping (Bs4, requests)
 
-# Testing
-You can test the APIs with this command
-```
-python manage.py test
-```
+
